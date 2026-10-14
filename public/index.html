@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APO DP Batch Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], mono: ['JetBrains Mono', 'ui-monospace', 'monospace'] } } }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+    <style>
+        /* ---------- Theme tokens ---------- */
+        :root {
+            --bg: #f5f6f8;
+            --surface: #ffffff;
+            --surface-2: #f9fafb;
+            --surface-3: #f0f2f5;
+            --border: #e1e4e8;
+            --border-strong: #c9ced6;
+            --text: #14181f;
+            --text-2: #4a5360;
+            --text-3: #7a8494;
+            --accent: #1d4ed8;
+            --accent-soft: #eff4ff;
+            --accent-text: #1d4ed8;
+            --local: #0f766e;
+            --local-soft: #effaf8;
+            --danger: #b42318;
+            --danger-soft: #fef3f2;
+            --warn-text: #8a5a00;
+            --shadow-sm: 0 1px 2px rgba(16,24,40,.04);
+            --shadow-lg: 0 12px 32px rgba(16,24,40,.16);
+            --night: rgba(16,24,40,.035);
+            --radius: 6px;
+        }
+        html.dark {
+            --bg: #0f1216;
+            --surface: #161a20;
+            --surface-2: #1a1f26;
+            --surface-3: #20262e;
+            --border: #272d36;
+            --border-strong: #38404c;
+            --text: #e6e9ee;
+            --text-2: #a3acb9;
+            --text-3: #747f8f;
+            --accent: #6b9bff;
+            --accent-soft: rgba(107,155,255,.10);
+            --accent-text: #8fb3ff;
+            --local: #4fd1c0;
+            --local-soft: rgba(79,209,192,.09);
+            --danger: #f4796d;
+            --danger-soft: rgba(244,121,109,.09);
+            --warn-text: #e3b04b;
+            --shadow-sm: none;
+            --shadow-lg: 0 12px 32px rgba(0,0,0,.55);
+            --night: rgba(0,0,0,.22);
+        }
+
+        * { box-sizing: border-box; }
+        body { background: var(--bg); color: var(--text); font-size: 13px; transition: background .2s, color .2s; }
+        ::selection { background: var(--accent); color: #fff; }
+
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-3); background-clip: content-box; border: 3px solid transparent; }
+
+        /* ---------- Primitives ---------- */
+        .surface { background: var(--surface); border: 1px solid var(--border); }
+        .surface-2 { background: var(--surface-2); }
+        .t-1 { color: var(--text); } .t-2 { color: var(--text-2); } .t-3 { color: var(--text-3); }
+        .bd { border-color: var(--border); }
+        .eyebrow { font-size: 11px; font-weight: 500; letter-spacing: .02em; color: var(--text-3); }
+
+        .btn { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; font-size: 13px; border-radius: var(--radius); padding: 7px 12px; transition: background .12s, border-color .12s, color .12s; cursor: pointer; border: 1px solid transparent; line-height: 1.2; }
+        .btn:focus-visible, .field:focus-visible, .chip:focus-visible, .segmented button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        html.dark .btn-primary { color: #0b1020; }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-ghost { color: var(--text-2); background: transparent; }
+        .btn-ghost:hover { background: var(--surface-3); color: var(--text); }
+        .btn-outline { color: var(--text-2); border-color: var(--border); background: var(--surface); }
+        .btn-outline:hover { border-color: var(--border-strong); color: var(--text); background: var(--surface-2); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        html.dark .btn-danger { color: #1a0b09; }
+        .btn-danger:hover { filter: brightness(1.1); }
+
+        .field { width: 100%; background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); border-radius: var(--radius); padding: 7px 10px; font-size: 13px; transition: border-color .12s, box-shadow .12s; }
+        .field::placeholder { color: var(--text-3); }
+        .field:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .field:disabled { opacity: .5; cursor: not-allowed; background: var(--surface-3); }
+        .field-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-2); margin-bottom: 4px; }
+
+        .segmented { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+        .segmented button { font-size: 12px; font-weight: 500; padding: 6px 12px; color: var(--text-2); transition: background .12s, color .12s; border-right: 1px solid var(--border); }
+        .segmented button:last-child { border-right: none; }
+        .segmented button:hover { background: var(--surface-2); color: var(--text); }
+        .segmented button.active { background: var(--accent); color: #fff; }
+        html.dark .segmented button.active { color: #0b1020; }
+        .segmented button.active.local { background: var(--local); }
+
+        .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); cursor: pointer; transition: all .12s; }
+        .chip:hover { border-color: var(--text-3); color: var(--text); }
+        .chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
+        .chip.on.danger { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+        .kbd { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 0 5px; border-radius: 3px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-3); line-height: 16px; }
+
+        .tag { display: inline-flex; align-items: center; font-size: 11px; font-weight: 500; padding: 1px 7px; border-radius: 4px; }
+        .tag-id { background: var(--surface-3); color: var(--text-2); font-family: 'JetBrains Mono', monospace; }
+        .tag-failed { background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); }
+        .tag-next { background: var(--surface-3); color: var(--text-2); border: 1px solid var(--border-strong); font-size: 10px; }
+        .tag-ok { color: var(--text-3); }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .time-text { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; color: var(--accent-text); white-space: nowrap; }
+        .time-text.local { color: var(--local); }
+
+        /* ---------- Sidebar cards ---------- */
+        .side-card { position: relative; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--region, var(--accent)); border-radius: var(--radius); padding: 9px 12px; cursor: pointer; transition: background .12s, border-color .12s; }
+        .side-card:hover { background: var(--surface-2); border-color: var(--border-strong); border-left-color: var(--region, var(--accent)); }
+        .side-card.flagged { background: var(--danger-soft); border-color: var(--danger); border-left-color: var(--danger); }
+
+        /* ---------- Execution table ---------- */
+        .data-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .data-table th { position: sticky; top: 0; z-index: 5; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; padding: 9px 14px; background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+        .data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        .data-table tbody tr { cursor: pointer; transition: background .1s; }
+        .data-table tbody tr:hover { background: var(--surface-2); }
+        .data-table tbody tr:last-child td { border-bottom: none; }
+        .data-table tr.flagged td { background: var(--danger-soft); }
+        .data-table tr.flagged td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+        .region-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+        /* ---------- Gantt ---------- */
+        .gantt-wrapper { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); height: 100%; }
+        .gantt-sidebar { width: 240px; flex-shrink: 0; border-right: 1px solid var(--border); background: var(--surface); z-index: 50; position: relative; display: flex; flex-direction: column; }
+        .gantt-timeline-container { flex-grow: 1; overflow: auto; position: relative; }
+        .gantt-timeline-inner { min-width: 1440px; position: relative; min-height: 100%; }
+        .gantt-header { display: flex; border-bottom: 1px solid var(--border); height: 38px; background: var(--surface-2); align-items: center; position: sticky; top: 0; z-index: 40; }
+        .gantt-header-cell { font-size: 11px; font-weight: 500; color: var(--text-3); border-right: 1px solid var(--border); flex: 1; display: flex; justify-content: flex-start; padding-left: 6px; align-items: center; height: 100%; font-family: 'JetBrains Mono', monospace; }
+        .gantt-header-cell:last-child { border-right: none; }
+        .gantt-grid { position: absolute; top: 38px; bottom: 0; left: 0; right: 0; display: flex; pointer-events: none; z-index: 10; }
+        .gantt-grid-line { flex: 1; border-right: 1px solid var(--border); }
+        .gantt-grid-line.night { background: var(--night); }
+        .gantt-grid-line:last-child { border-right: none; }
+        .gantt-row { display: flex; align-items: center; height: 40px; border-bottom: 1px solid var(--border); position: relative; }
+        .gantt-row:hover { background: var(--surface-2); }
+        .gantt-label { padding: 0 14px; font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; display: block; cursor: pointer; }
+        .gantt-label:hover { color: var(--accent-text); }
+        .gantt-label.flagged { color: var(--danger); }
+        .gantt-bar-wrapper { position: absolute; inset: 0; z-index: 15; pointer-events: none; }
+        .gantt-bar { position: absolute; top: 8px; height: 24px; border-radius: 3px; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; padding: 0 8px; white-space: nowrap; cursor: pointer; pointer-events: auto; overflow: hidden; text-overflow: ellipsis; opacity: .92; transition: opacity .12s; }
+        .gantt-bar:hover { opacity: 1; outline: 2px solid var(--text); outline-offset: 1px; z-index: 30; }
+        .gantt-bar.flagged { background: var(--danger) !important; opacity: 1; }
+        html.dark .gantt-bar.flagged { color: #1a0b09; }
+        
+        /* THIS IS THE UPDATED LIVE TIMER CSS */
+        .current-time-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--danger); z-index: 25; pointer-events: none; transition: left 1s linear; }
+        .current-time-marker { position: absolute; top: 38px; left: 0; transform: translateX(-50%); background: var(--danger); color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 6px; border-radius: 0 0 3px 3px; font-weight: 500; }
+        html.dark .current-time-marker { color: #1a0b09; }
+
+        /* ---------- Drawer & modal ---------- */
+        .modal-active { display: flex !important; }
+        .overlay { animation: fadeIn .12s ease; }
+        .drawer { animation: slideIn .18s ease-out; }
+        .dialog { animation: fadeIn .15s ease; }
+        @keyframes fadeIn { from { opacity: 0; } }
+        @keyframes slideIn { from { transform: translateX(24px); opacity: 0; } }
+
+        .info-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+
+        /* ---------- Toast & skeleton ---------- */
+        #toastHost { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 8px; }
+        .toast { background: var(--text); color: var(--bg); font-size: 13px; font-weight: 500; padding: 9px 14px; border-radius: var(--radius); box-shadow: var(--shadow-lg); animation: fadeIn .15s ease; }
+        .toast.error { background: var(--danger); color: #fff; }
+        .skeleton { background: var(--surface-3); border-radius: var(--radius); animation: breathe 1.4s ease-in-out infinite; }
+        @keyframes breathe { 50% { opacity: .5; } }
+
+        input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: searchfield-cancel-button; cursor: pointer; }
+        input[type="date"], input[type="time"] { color-scheme: light; }
+        html.dark input[type="date"], html.dark input[type="time"] { color-scheme: dark; }
+    </style>
+</head>
+<body class="font-sans h-screen flex flex-col overflow-hidden antialiased">
+
+    <!-- ============ HEADER ============ -->
+    <header class="surface border-x-0 border-t-0 px-5 py-2.5 flex justify-between items-center shrink-0 relative z-20 gap-4">
+        <div class="flex items-center gap-4 min-w-0">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-md flex items-center justify-center font-bold text-[11px] tracking-wide" style="background: var(--text); color: var(--bg)">APO</div>
+                <div class="leading-tight">
+                    <h1 class="text-sm font-semibold t-1" id="mainTitle">Batch Scheduler</h1>
+                    <p class="text-xs t-3" id="mainSubtitle">IST operator view</p>
+                </div>
+            </div>
+
+            <div class="h-6 w-px" style="background: var(--border)"></div>
+
+            <div class="segmented" role="tablist" aria-label="Sector">
+                <button id="btnLaundry" onclick="switchSector('laundry')">Laundry</button>
+                <button id="btnBeauty" onclick="switchSector('beauty')" class="active">Beauty</button>
+            </div>
+
+            <div class="segmented" role="tablist" aria-label="Time zone mode">
+                <button id="btnModeIST" onclick="toggleViewMode('IST')" class="active">IST Operator</button>
+                <button id="btnModeLocal" onclick="toggleViewMode('LOCAL')">Local Viewer</button>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-1 justify-end max-w-xl">
+            <div class="relative w-full">
+                <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 t-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="search" id="searchInput" placeholder="Search by name, ID, region or box" class="field" style="padding-left: 32px; padding-right: 36px">
+                <span class="kbd absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">/</span>
+            </div>
+            <button onclick="toggleTheme()" class="btn btn-outline" title="Toggle light / dark theme" aria-label="Toggle theme"><span id="themeIcon">Dark</span></button>
+            <button onclick="openAddJobModal()" class="btn btn-primary whitespace-nowrap">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                Add job
+            </button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- ============ SIDEBAR ============ -->
+        <aside class="w-72 surface border-y-0 border-l-0 flex flex-col shrink-0 z-10">
+            <div class="p-4 border-b bd">
+                <div class="flex justify-between items-center mb-2.5">
+                    <h2 class="text-xs font-semibold t-1" id="sidebarTitle">Monitor date (IST)</h2>
+                    <label class="flex items-center gap-1.5 text-xs t-2 cursor-pointer select-none">
+                        <input type="checkbox" id="chkDateFilter" checked class="w-3.5 h-3.5 cursor-pointer" style="accent-color: var(--accent)" onchange="toggleDateFilter()">
+                        Filter by date
+                    </label>
+                </div>
+                <div class="flex gap-1.5 mb-2.5">
+                    <button class="btn btn-outline !px-2.5" onclick="shiftDate(-1)" title="Previous day" aria-label="Previous day">&lsaquo;</button>
+                    <input type="date" id="dateSelector" class="field cursor-pointer">
+                    <button class="btn btn-outline !px-2.5" onclick="shiftDate(1)" title="Next day" aria-label="Next day">&rsaquo;</button>
+                </div>
+                <div class="flex items-center justify-between">
+                    <p id="currentDateDisplay" class="text-xs font-medium"></p>
+                    <button class="text-xs font-medium hover:underline" style="color: var(--accent-text)" onclick="goToToday()">Today</button>
+                </div>
+            </div>
+
+            <div class="px-4 py-2 flex items-center justify-between border-b bd surface-2">
+                <span class="eyebrow">Jobs for this day</span>
+                <span id="sideCount" class="tag tag-id">0</span>
+            </div>
+            <div id="dateJobsList" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
+        </aside>
+
+        <!-- ============ MAIN ============ -->
+        <main class="flex-1 flex flex-col overflow-hidden min-w-0">
+
+            <!-- Stats strip -->
+            <div class="px-6 pt-4 shrink-0">
+                <div class="surface rounded-lg grid grid-cols-4 divide-x" style="--tw-divide-opacity:1" id="statsStrip">
+                    <div class="px-4 py-3" style="border-color: var(--border)">
+                        <p class="eyebrow">Scheduled</p>
+                        <p class="text-xl font-semibold t-1 mt-0.5 mono" id="statTotal">0</p>
+                    </div>
+                    <div class="px-4 py-3" style="border-color: var(--border)">
+                        <p class="eyebrow">Flagged</p>
+                        <p class="text-xl font-semibold mt-0.5 mono" id="statFlagged" style="color: var(--text)">0</p>
+                    </div>
+                    <div class="px-4 py-3" style="border-color: var(--border)">
+                        <p class="eyebrow">Regions</p>
+                        <p class="text-xl font-semibold t-1 mt-0.5 mono" id="statRegions">0</p>
+                    </div>
+                    <div class="px-4 py-3 min-w-0" style="border-color: var(--border)">
+                        <p class="eyebrow">Next scheduled</p>
+                        <p class="text-sm font-medium t-1 mt-1 truncate" id="statNext">&mdash;</p>
+                        <p class="text-xs t-3 truncate" id="statNextSub">&nbsp;</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs + filters -->
+            <div class="flex px-6 pt-3 gap-6 shrink-0 justify-between items-end border-b bd mt-3">
+                <div class="flex gap-5">
+                    <button onclick="switchTab('list')" id="tabList" class="pb-2.5 text-[13px] font-medium t-3 border-b-2 border-transparent transition-colors hover:t-1">Execution list</button>
+                    <button onclick="switchTab('chart')" id="tabChart" class="pb-2.5 text-[13px] font-medium border-b-2 transition-colors" style="color: var(--accent-text); border-color: var(--accent)">24-hour timeline</button>
+                </div>
+                <div class="flex gap-2 pb-2 items-center flex-wrap justify-end">
+                    <button id="chipFlagged" class="chip" onclick="toggleFlaggedOnly()">Flagged only</button>
+                    <span class="w-px h-4" style="background: var(--border-strong)"></span>
+                    <div id="activeKeywords" class="flex gap-1.5 items-center flex-wrap"></div>
+                    <input type="text" id="customKeywordInput" placeholder="Add keyword and press Enter" class="field !w-52 !py-1 !text-xs">
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div id="regionLegend" class="px-6 py-2 flex gap-4 flex-wrap items-center shrink-0 text-xs t-2"></div>
+
+            <div id="viewList" class="flex-1 overflow-y-auto px-6 pb-6 hidden">
+                <div id="jobListContainer"></div>
+            </div>
+
+            <div id="viewChart" class="flex-1 overflow-hidden px-6 pb-6 flex flex-col">
+                <div class="gantt-wrapper flex-1 relative">
+                    <div class="gantt-sidebar">
+                        <div class="gantt-header px-4">
+                            <span class="eyebrow">Batch process</span>
+                        </div>
+                        <div id="ganttLabelsContainer" class="overflow-y-auto flex-1" style="scrollbar-width: none"></div>
+                    </div>
+
+                    <div class="gantt-timeline-container" id="timelineScrollContainer">
+                        <div class="gantt-timeline-inner" id="ganttTimelineInner">
+                            <div class="gantt-header" id="ganttTimeHeaders"></div>
+                            <div class="gantt-grid" id="ganttGridLines"></div>
+                            <div id="currentTimeLine" class="current-time-line hidden">
+                                <div class="current-time-marker" id="currentTimeText"></div>
+                            </div>
+                            <div id="ganttBarsContainer" class="relative z-20"></div>
+                        </div>
+                    </div>
+                    <button id="btnJumpNow" onclick="scrollToNow()" class="btn btn-outline absolute bottom-4 right-4 z-[60] !text-xs hidden" style="box-shadow: var(--shadow-sm)">Jump to current time</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ============ JOB FORM MODAL ============ -->
+    <div id="jobFormModal" class="fixed inset-0 hidden items-center justify-center z-50 overlay" style="background: rgba(10,14,22,.5)" onmousedown="if(event.target===this) toggleModal('jobFormModal')">
+        <div class="dialog rounded-lg w-full max-w-lg overflow-hidden" style="background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-lg)">
+            <div class="px-5 py-3.5 border-b bd flex justify-between items-center">
+                <h3 class="text-sm font-semibold t-1" id="formModalTitle">Add new job</h3>
+                <button onclick="toggleModal('jobFormModal')" class="btn btn-ghost !p-1 w-7 h-7 justify-center text-lg leading-none" aria-label="Close">&times;</button>
+            </div>
+            <form id="jobForm" class="p-5 space-y-4 max-h-[75vh] overflow-y-auto" onsubmit="handleSaveJob(event)">
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="field-label">Job ID</label>
+                        <input type="number" id="formJobId" required class="field">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="field-label">Job name</label>
+                        <input type="text" id="formJobName" required class="field">
+                    </div>
+                </div>
+                <div>
+                    <label class="field-label">Box / process chain</label>
+                    <input type="text" id="formJobBox" required class="field mono !text-xs">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="field-label">Region description</label>
+                        <input type="text" id="formJobRegion" required class="field">
+                    </div>
+                    <div>
+                        <label class="field-label">ABAP program</label>
+                        <input type="text" id="formJobAbap" required class="field mono !text-xs">
+                    </div>
+                </div>
+
+                <fieldset class="rounded-md p-3.5 surface-2 border bd">
+                    <legend class="eyebrow px-1">Schedule rule</legend>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="field-label">Frequency</label>
+                            <select id="formRuleFrequency" class="field">
+                                <option value="weekdays">Weekdays</option>
+                                <option value="daily">Daily</option>
+                                <option value="monthly_nth_weekday">1st Wednesday</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label">Time (HH:mm)</label>
+                            <input type="time" id="formRuleTime" required class="field">
+                        </div>
+                        <div>
+                            <label class="field-label">UTC offset</label>
+                            <input type="text" id="formRuleUtcOffset" placeholder="+01:00" required class="field mono">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="field-label">Schedule (text)</label>
+                        <input type="text" id="formJobSchedule" required class="field">
+                    </div>
+                    <div>
+                        <label class="field-label">Dependency</label>
+                        <input type="text" id="formJobDependency" required class="field">
+                    </div>
+                </div>
+                <div class="pt-3 flex justify-end gap-2 border-t bd">
+                    <button type="button" onclick="toggleModal('jobFormModal')" class="btn btn-outline">Cancel</button>
+                    <button type="submit" id="formSubmitBtn" class="btn btn-primary">Save job</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ DETAILS DRAWER ============ -->
+    <div id="detailsModal" class="fixed inset-0 hidden justify-end z-50 overlay" style="background: rgba(10,14,22,.4)" onmousedown="if(event.target===this) toggleModal('detailsModal')">
+        <div class="drawer w-full max-w-md h-full flex flex-col" style="background: var(--bg); border-left: 1px solid var(--border); box-shadow: var(--shadow-lg)">
+            <div class="px-5 py-4 border-b bd flex justify-between items-start" style="background: var(--surface)">
+                <div class="min-w-0 pr-3">
+                    <span id="detId" class="tag tag-id mb-1.5"></span>
+                    <h2 id="detName" class="text-base font-semibold t-1 leading-snug break-words"></h2>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                    <button onclick="openEditJobModal()" class="btn btn-outline !px-3 !py-1 !text-xs">Edit</button>
+                    <button onclick="deleteCurrentJob()" class="btn btn-outline !px-3 !py-1 !text-xs" style="color: var(--danger)">Delete</button>
+                    <button onclick="toggleModal('detailsModal')" class="btn btn-ghost !p-1 w-7 h-7 justify-center text-lg leading-none ml-1" aria-label="Close">&times;</button>
+                </div>
+            </div>
+
+            <div class="p-5 flex-1 overflow-y-auto space-y-3">
+                <div class="info-block" id="modalPrimaryBlock" style="border-left: 3px solid var(--accent)">
+                    <div class="flex justify-between items-center">
+                        <p class="eyebrow">Will execute at</p>
+                        <span class="tag tag-id" id="modalPrimaryBadge">IST</span>
+                    </div>
+                    <p id="detSchedulePrimary" class="text-2xl font-semibold mt-1 mono" style="color: var(--accent-text)"></p>
+                </div>
+
+                <div class="info-block">
+                    <p class="eyebrow mb-1" id="modalSecondaryLabel">Local configured schedule</p>
+                    <p id="detScheduleSecondary" class="text-sm font-medium t-1 mono"></p>
+                    <p id="detRegion" class="text-xs t-2 mt-1"></p>
+                </div>
+
+                <div class="info-block">
+                    <p class="eyebrow mb-1.5">Box / process chain</p>
+                    <p id="detBox" class="text-xs mono p-2 rounded break-all t-1" style="background: var(--surface-2); border: 1px solid var(--border)"></p>
+                </div>
+
+                <div class="info-block">
+                    <p class="eyebrow mb-1.5">ABAP program</p>
+                    <p id="detAbap" class="text-sm mono whitespace-pre-wrap t-1"></p>
+                </div>
+
+                <div class="info-block">
+                    <p class="eyebrow mb-1">Dependency</p>
+                    <p id="detDependency" class="text-sm font-medium t-1"></p>
+                </div>
+
+                <!-- Flag blocks -->
+                <div class="rounded-md p-3.5 hidden" id="flaggedStateBlock" style="background: var(--danger-soft); border: 1px solid var(--danger)">
+                    <p class="text-xs font-semibold mb-1" style="color: var(--danger)">Active issue</p>
+                    <p id="detFlagMessage" class="text-sm mb-3 t-1"></p>
+                    <button onclick="resolveCurrentJob()" class="btn btn-danger w-full justify-center !text-xs">Mark as resolved</button>
+                </div>
+
+                <div class="info-block" id="flagActionBlock">
+                    <p class="eyebrow mb-2">Flag an issue</p>
+                    <input type="text" id="flagInput" placeholder="Describe the issue, e.g. data missing in cube" class="field mb-2" onkeydown="if(event.key==='Enter'){event.preventDefault();flagCurrentJob();}">
+                    <button onclick="flagCurrentJob()" class="btn btn-outline w-full justify-center !text-xs">Flag job</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastHost"></div>
+
+    <script>
+        let currentSector = 'beauty';
+        let viewMode = 'IST';
+        let currentDetailJobId = null;
+        let isEditingMode = false;
+        let flaggedOnly = false;
+
+        let jobsData = [];
+        let selectedDate = new Date();
+        let activeKeywords = [];
+        let compiledExecutions = [];
+        let isLoading = true;
+
+        /* ---------- Helpers ---------- */
+        function esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function toast(msg, type = 'ok') {
+            const el = document.createElement('div');
+            el.className = 'toast' + (type === 'error' ? ' error' : '');
+            el.textContent = msg;
+            document.getElementById('toastHost').appendChild(el);
+            setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = 0; setTimeout(() => el.remove(), 300); }, 2600);
+        }
+
+        /* ---------- Theme ---------- */
+        function applyTheme(dark) {
+            document.documentElement.classList.toggle('dark', dark);
+            document.getElementById('themeIcon').textContent = dark ? 'Light' : 'Dark';
+            try { localStorage.setItem('apo-theme', dark ? 'dark' : 'light'); } catch (e) {}
+        }
+        function toggleTheme() { applyTheme(!document.documentElement.classList.contains('dark')); }
+        (function initTheme() {
+            let saved = null;
+            try { saved = localStorage.getItem('apo-theme'); } catch (e) {}
+            const dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+            applyTheme(dark);
+        })();
+
+        /* ---------- Date controls ---------- */
+        function toggleDateFilter() {
+            const isChecked = document.getElementById('chkDateFilter').checked;
+            document.getElementById('dateSelector').disabled = !isChecked;
+            updateDateDisplay();
+            applyFilters();
+        }
+
+        function syncDateInput() {
+            const yyyy = selectedDate.getFullYear();
+            const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(selectedDate.getDate()).padStart(2, '0');
+            document.getElementById('dateSelector').value = `${yyyy}-${mm}-${dd}`;
+        }
+
+        function shiftDate(delta) {
+            selectedDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + delta);
+            syncDateInput(); updateDateDisplay(); applyFilters();
+        }
+
+        function goToToday() {
+            selectedDate = new Date();
+            syncDateInput(); updateDateDisplay(); applyFilters();
+        }
+
+        function toggleViewMode(mode) {
+            viewMode = mode;
+            document.getElementById('btnModeIST').className = mode === 'IST' ? 'active' : '';
+            document.getElementById('btnModeLocal').className = mode === 'LOCAL' ? 'active local' : '';
+
+            if (mode === 'IST') {
+                document.getElementById('sidebarTitle').innerText = "Monitor date (IST)";
+                document.getElementById('mainSubtitle').innerText = "IST operator view";
+            } else {
+                document.getElementById('sidebarTitle').innerText = "Monitor date (Local)";
+                document.getElementById('mainSubtitle').innerText = "Local viewer: each job in its own time zone";
+            }
+            updateDateDisplay();
+            applyFilters();
+        }
+
+        /* ---------- Gantt scaffolding ---------- */
+        function initScrollSync() {
+            const labelsContainer = document.getElementById('ganttLabelsContainer');
+            const timelineContainer = document.getElementById('timelineScrollContainer');
+            let isSyncingLeft = false; let isSyncingRight = false;
+
+            labelsContainer.addEventListener('scroll', function () {
+                if (!isSyncingLeft) { isSyncingRight = true; timelineContainer.scrollTop = this.scrollTop; }
+                isSyncingLeft = false;
+            });
+            timelineContainer.addEventListener('scroll', function () {
+                if (!isSyncingRight) { isSyncingLeft = true; labelsContainer.scrollTop = this.scrollTop; }
+                isSyncingRight = false;
+            });
+        }
+
+        function generateGanttGrid() {
+            const headersContainer = document.getElementById('ganttTimeHeaders');
+            const gridContainer = document.getElementById('ganttGridLines');
+            headersContainer.innerHTML = ''; gridContainer.innerHTML = '';
+            for (let i = 0; i < 24; i++) {
+                const hourString = i.toString().padStart(2, '0');
+                const headerCell = document.createElement('div');
+                headerCell.className = 'gantt-header-cell'; headerCell.innerText = `${hourString}:00`;
+                headersContainer.appendChild(headerCell);
+
+                const gridLine = document.createElement('div');
+                gridLine.className = 'gantt-grid-line' + ((i < 6 || i >= 20) ? ' night' : '');
+                gridContainer.appendChild(gridLine);
+            }
+        }
+
+        function scrollToNow() {
+            const container = document.getElementById('timelineScrollContainer');
+            const now = luxon.DateTime.now().setZone('Asia/Kolkata');
+            const pct = (now.hour * 60 + now.minute) / 1440;
+            container.scrollTo({ left: pct * container.scrollWidth - container.clientWidth / 2, behavior: 'smooth' });
+        }
+
+        /* ---------- Region helpers ---------- */
+        function getShortRegionCode(region) {
+            if (!region) return '';
+            const r = region.toUpperCase();
+            if (r.includes('SKP')) return 'SKP'; if (r.includes('WEU')) return 'WEU';
+            if (r.includes('CEE')) return 'CEE'; if (r.includes('CIS')) return 'CIS';
+            if (r.includes('MEA')) return 'MEA'; if (r.includes('ANZ')) return 'ANZ';
+            if (r.includes('GCN')) return 'GCN'; if (r.includes('APAC')) return 'APAC';
+            if (r.includes('LAT')) return 'LAT'; if (r.includes('KOR')) return 'KOR';
+            if (r.includes('HIBSA')) return 'HIBSA'; if (r.includes('NA ') || r.includes('NAB') || r.includes('L NA')) return 'NA';
+
+            const parts = region.split(' ');
+            const first = parts[0].replace(/[^A-Z0-9]/g, '');
+            if (first.length > 0 && first !== 'B' && first !== 'UK' && first !== 'L') return first;
+            if (parts.length > 1) return parts[1].replace(/[^A-Z0-9]/g, '');
+            return first;
+        }
+
+        function isRunningOnDateLocal(job, luxonDate) {
+            if (!job.rule) return false;
+            const rule = job.rule;
+            const jsDayOfWeek = luxonDate.weekday === 7 ? 0 : luxonDate.weekday;
+            const dayOfMonth = luxonDate.day;
+
+            switch (rule.frequency) {
+                case 'daily': return true;
+                case 'weekdays':
+                    if (Array.isArray(rule.days)) return rule.days.includes(jsDayOfWeek);
+                    if (typeof rule.days === 'number') return rule.days === jsDayOfWeek;
+                    return [1, 2, 3, 4, 5].includes(jsDayOfWeek);
+                case 'weekly': return jsDayOfWeek === rule.day;
+                case 'monthly_start': return dayOfMonth === 1;
+                case 'monthly_last_day': return dayOfMonth === luxonDate.daysInMonth;
+                case 'monthly_nth_weekday':
+                    if (jsDayOfWeek !== rule.day) return false;
+                    if (rule.n === 'last') return (dayOfMonth + 7) > luxonDate.daysInMonth;
+                    return Math.ceil(dayOfMonth / 7) === rule.n;
+                case 'custom_days':
+                    if (Array.isArray(rule.days)) return rule.days.includes(jsDayOfWeek);
+                    if (typeof rule.days === 'number') return rule.days === jsDayOfWeek;
+                    return false;
+                default: return false;
+            }
+        }
+
+        /* ---------- Execution compiler ---------- */
+        function compileExecutions(jobs, targetDate, isSearching) {
+            const results = [];
+            const selectedLuxon = luxon.DateTime.fromJSDate(targetDate);
+            const useDateFilter = document.getElementById('chkDateFilter').checked;
+            const IST_ZONE = 'UTC+05:30';
+
+            jobs.forEach(job => {
+                const timeString = job.rule?.time || (job.schedule ? job.schedule.match(/(\d{2}):(\d{2})/) : null);
+                if (!timeString) return;
+
+                const match = (typeof timeString === 'string') ? timeString.match(/(\d{2}):(\d{2})/) : timeString;
+                if (!match) return;
+
+                const hours = parseInt(match[1], 10);
+                const minutes = parseInt(match[2], 10);
+
+                const rawOffset = job.rule?.utc_offset || "+00:00";
+                const offsetString = (rawOffset.startsWith('+') || rawOffset.startsWith('-')) ? rawOffset : '+' + rawOffset;
+                const sourceTimezone = "UTC" + offsetString;
+
+                let didRunToday = false;
+
+                if (useDateFilter) {
+                    if (viewMode === 'IST') {
+                        const targetBaseIST = selectedLuxon.setZone(IST_ZONE).startOf('day');
+                        const localBase = targetBaseIST.setZone(sourceTimezone).startOf('day');
+                        const checkDates = [localBase.minus({ days: 1 }), localBase, localBase.plus({ days: 1 })];
+
+                        checkDates.forEach(localLuxonDate => {
+                            if (isRunningOnDateLocal(job, localLuxonDate)) {
+                                const localExecution = localLuxonDate.set({ hour: hours, minute: minutes });
+                                const istExecution = localExecution.setZone(IST_ZONE);
+
+                                if (istExecution.hasSame(targetBaseIST, 'day')) {
+                                    pushResult(job, localExecution, istExecution, false);
+                                    didRunToday = true;
+                                }
+                            }
+                        });
+                    } else {
+                        const floatingLocal = luxon.DateTime.fromObject({
+                            year: targetDate.getFullYear(), month: targetDate.getMonth() + 1, day: targetDate.getDate()
+                        }, { zone: sourceTimezone });
+
+                        if (isRunningOnDateLocal(job, floatingLocal)) {
+                            const localExecution = floatingLocal.set({ hour: hours, minute: minutes });
+                            const istExecution = localExecution.setZone(IST_ZONE);
+                            pushResult(job, localExecution, istExecution, false);
+                            didRunToday = true;
+                        }
+                    }
+                }
+
+                if (!useDateFilter || (isSearching && !didRunToday)) {
+                    const targetBaseLocal = selectedLuxon.setZone(sourceTimezone).startOf('day');
+                    let checkLocal = targetBaseLocal;
+                    let found = false;
+
+                    for (let i = 0; i < 45; i++) {
+                        if (isRunningOnDateLocal(job, checkLocal)) {
+                            const localExecution = checkLocal.set({ hour: hours, minute: minutes });
+                            const istExecution = localExecution.setZone(IST_ZONE);
+                            pushResult(job, localExecution, istExecution, true);
+                            found = true;
+                            break;
+                        }
+                        checkLocal = checkLocal.plus({ days: 1 });
+                    }
+
+                    if (!found) {
+                        const localExecution = targetBaseLocal.set({ hour: hours, minute: minutes });
+                        const istExecution = localExecution.setZone(IST_ZONE);
+                        pushResult(job, localExecution, istExecution, true);
+                    }
+                }
+
+                function pushResult(jobData, locExec, istExec, isCatalogView) {
+                    const badgeText = isCatalogView ? `<span class="tag tag-next shrink-0" title="Date filter off or search bypass: showing next valid execution date">Next run</span>` : '';
+
+                    results.push({
+                        job: jobData,
+                        istTime: istExec,
+                        localTime: locExec,
+                        formattedIST: istExec.toFormat('HH:mm'),
+                        formattedLocal: locExec.toFormat('HH:mm'),
+                        localDateStr: locExec.toFormat('cccc, LLL d'),
+                        istDateStr: istExec.toFormat('cccc, LLL d'),
+                        shortRegion: getShortRegionCode(jobData.region),
+                        sortMinutes: viewMode === 'IST' ? (istExec.hour * 60) + istExec.minute : (locExec.hour * 60) + locExec.minute,
+                        displayPrimary: viewMode === 'IST' ? `${istExec.toFormat('HH:mm')} IST` : `${locExec.toFormat('HH:mm')} ${getShortRegionCode(jobData.region)}`,
+                        displaySecondary: viewMode === 'IST' ?
+                            `Local: ${locExec.toFormat('ccc, LLL d')} ${locExec.toFormat('HH:mm')} [UTC${offsetString}]` :
+                            `IST: ${istExec.toFormat('ccc, LLL d')} ${istExec.toFormat('HH:mm')}`,
+                        warningBadge: badgeText,
+                        isCatalogView: isCatalogView,
+                        utcDisplay: offsetString
+                    });
+                }
+            });
+
+            results.sort((a, b) => a.sortMinutes - b.sortMinutes);
+            return results;
+        }
+
+        /* ---------- Keywords & filters ---------- */
+        document.getElementById('customKeywordInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const val = this.value.trim().toLowerCase();
+                if (val && !activeKeywords.includes(val)) {
+                    activeKeywords.push(val); this.value = '';
+                    renderKeywords(); applyFilters();
+                }
+            }
+        });
+
+        function removeKeyword(kw) { activeKeywords = activeKeywords.filter(k => k !== kw); renderKeywords(); applyFilters(); }
+
+        function renderKeywords() {
+            const container = document.getElementById('activeKeywords');
+            container.innerHTML = '';
+            activeKeywords.forEach(kw => {
+                const el = document.createElement('span');
+                el.className = 'chip on';
+                el.innerHTML = `${esc(kw)} <button class="opacity-70 hover:opacity-100 text-sm leading-none" aria-label="Remove tag">&times;</button>`;
+                el.querySelector('button').addEventListener('click', () => removeKeyword(kw));
+                container.appendChild(el);
+            });
+        }
+
+        function toggleFlaggedOnly() {
+            flaggedOnly = !flaggedOnly;
+            const chip = document.getElementById('chipFlagged');
+            chip.classList.toggle('on', flaggedOnly);
+            chip.classList.toggle('danger', flaggedOnly);
+            applyFilters();
+        }
+
+        /* ---------- Data ---------- */
+        async function loadSectorData() {
+            isLoading = true; renderAll();
+            try {
+                const response = await fetch(`/api/jobs?sector=${currentSector}`);
+                if (!response.ok) throw new Error(`Failed to load API data`);
+                jobsData = await response.json();
+            } catch (error) {
+                console.error("Error fetching data from MongoDB:", error);
+                jobsData = [];
+                toast('Could not load jobs from the server', 'error');
+            }
+            isLoading = false;
+            applyFilters();
+        }
+
+        function switchSector(sector) {
+            currentSector = sector;
+            document.getElementById('btnLaundry').className = sector === 'laundry' ? 'active' : '';
+            document.getElementById('btnBeauty').className = sector === 'beauty' ? 'active' : '';
+
+            document.getElementById('searchInput').value = '';
+            activeKeywords = []; renderKeywords(); loadSectorData();
+        }
+
+        function applyFilters() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const isSearching = query !== '' || activeKeywords.length > 0;
+
+            const filteredJobs = jobsData.filter(job => {
+                const matchesSearch = (job.name && job.name.toLowerCase().includes(query)) ||
+                    (job.id && job.id.toString().includes(query)) ||
+                    (job.region && job.region.toLowerCase().includes(query)) ||
+                    (job.box && job.box.toLowerCase().includes(query));
+
+                const matchesKeywords = activeKeywords.length === 0 || activeKeywords.every(kw =>
+                    (job.name && job.name.toLowerCase().includes(kw)) ||
+                    (job.box && job.box.toLowerCase().includes(kw)) ||
+                    (job.abap && job.abap.toLowerCase().includes(kw))
+                );
+                const matchesFlag = !flaggedOnly || job.flagged;
+                return matchesSearch && matchesKeywords && matchesFlag;
+            });
+
+            compiledExecutions = compileExecutions(filteredJobs, selectedDate, isSearching);
+            renderAll();
+        }
+
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+        function initDatePicker() {
+            const dateInput = document.getElementById('dateSelector');
+            syncDateInput();
+            dateInput.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    const [year, month, day] = e.target.value.split('-');
+                    selectedDate = new Date(year, month - 1, day);
+                    updateDateDisplay();
+                    applyFilters();
+                }
+            });
+            updateDateDisplay();
+        }
+
+        function updateDateDisplay() {
+            const dateStr = selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+            const useDateFilter = document.getElementById('chkDateFilter').checked;
+            const displayEl = document.getElementById('currentDateDisplay');
+
+            if (!useDateFilter) {
+                displayEl.innerText = `Catalog view: all jobs`;
+                displayEl.style.color = 'var(--text-3)';
+            } else {
+                displayEl.innerText = viewMode === 'IST' ? `${dateStr} (IST)` : `${dateStr} (Local)`;
+                displayEl.style.color = 'var(--text)';
+            }
+        }
+
+        /* ---------- Colors (muted palette) ---------- */
+        function getColorForRegion(region) {
+            if (!region) return '#5b7aa8';
+            const r = region.toLowerCase();
+            if (r.includes('hibsa')) return '#5865a8';
+            if (r.includes('001')) return '#3f8a6e';
+            if (r.includes('mea')) return '#b87a3d';
+            if (r.includes('cee')) return '#3a8590';
+            if (r.includes('apac') || r.includes('korea')) return '#a8505c';
+            if (r.includes('na') || r.includes('america')) return '#7461a3';
+            return '#5b7aa8';
+        }
+
+        function updateCurrentTimeMarker() {
+            const line = document.getElementById('currentTimeLine');
+            const jumpBtn = document.getElementById('btnJumpNow');
+            const useDateFilter = document.getElementById('chkDateFilter').checked;
+
+            if (viewMode === 'LOCAL' || !useDateFilter) {
+                line.classList.add('hidden'); jumpBtn.classList.add('hidden');
+                return;
+            }
+
+            const now = luxon.DateTime.now().setZone('Asia/Kolkata');
+            const isToday = now.hasSame(luxon.DateTime.fromJSDate(selectedDate), 'day');
+
+            if (isToday) {
+                const percent = ((now.hour * 3600 + now.minute * 60 + now.second) / 86400) * 100;
+                line.style.left = `${percent}%`;
+                line.classList.remove('hidden'); jumpBtn.classList.remove('hidden');
+                document.getElementById('currentTimeText').innerText = now.toFormat('HH:mm:ss');
+            } else {
+                line.classList.add('hidden'); jumpBtn.classList.add('hidden');
+            }
+        }
+        setInterval(updateCurrentTimeMarker, 1000);
+
+        /* ---------- Rendering ---------- */
+        function renderAll() {
+            renderStats();
+            renderLegend();
+            renderDateList();
+            renderMainList();
+            renderAdvancedGantt();
+            updateCurrentTimeMarker();
+        }
+
+        function emptyState(msg) {
+            return `<div class="text-center py-12 px-4">
+                        <p class="text-sm font-medium t-2">${msg}</p>
+                        <p class="text-xs t-3 mt-1">Try another date, clear the filters, or turn off the date filter.</p>
+                    </div>`;
+        }
+
+        function renderStats() {
+            const total = compiledExecutions.length;
+            const flagged = compiledExecutions.filter(e => e.job.flagged).length;
+            const regions = new Set(compiledExecutions.map(e => e.shortRegion).filter(Boolean)).size;
+
+            document.getElementById('statTotal').innerText = isLoading ? '-' : total;
+            const fEl = document.getElementById('statFlagged');
+            fEl.innerText = isLoading ? '-' : flagged;
+            fEl.style.color = flagged > 0 ? 'var(--danger)' : 'var(--text)';
+            document.getElementById('statRegions').innerText = isLoading ? '-' : regions;
+
+            const nextEl = document.getElementById('statNext');
+            const subEl = document.getElementById('statNextSub');
+            const now = luxon.DateTime.now().setZone('Asia/Kolkata');
+            const isToday = now.hasSame(luxon.DateTime.fromJSDate(selectedDate), 'day');
+            const useDateFilter = document.getElementById('chkDateFilter').checked;
+
+            if (viewMode === 'IST' && useDateFilter && isToday) {
+                const nowMin = now.hour * 60 + now.minute;
+                const next = compiledExecutions.find(e => e.sortMinutes >= nowMin);
+                if (next) {
+                    const diff = next.sortMinutes - nowMin;
+                    nextEl.innerText = `${next.formattedIST} IST  ${next.job.name}`;
+                    subEl.innerText = diff === 0 ? 'Starting now' : `In ${Math.floor(diff / 60)}h ${diff % 60}m`;
+                } else {
+                    nextEl.innerText = 'No further jobs today'; subEl.innerHTML = '&nbsp;';
+                }
+            } else {
+                nextEl.innerHTML = '&mdash;'; subEl.innerHTML = viewMode === 'IST' ? 'Select today to view' : '&nbsp;';
+            }
+        }
+
+        function renderLegend() {
+            const container = document.getElementById('regionLegend');
+            const seen = new Map();
+            compiledExecutions.forEach(e => {
+                const code = e.shortRegion || '-';
+                if (!seen.has(code)) seen.set(code, getColorForRegion(e.job.region));
+            });
+            if (seen.size === 0) { container.innerHTML = ''; return; }
+            container.innerHTML = `<span class="eyebrow">Regions</span>` +
+                [...seen.entries()].map(([code, color]) =>
+                    `<span class="inline-flex items-center gap-1.5"><span class="region-dot" style="background:${color}"></span>${esc(code)}</span>`
+                ).join('') +
+                `<span class="ml-auto inline-flex items-center gap-1.5 t-3"><span class="w-3 h-3 rounded-sm" style="background: var(--night); border: 1px solid var(--border-strong)"></span>Off-hours (20:00 to 06:00 IST)</span>`;
+        }
+
+        function renderDateList() {
+            const container = document.getElementById('dateJobsList');
+            document.getElementById('sideCount').innerText = compiledExecutions.length;
+
+            if (isLoading) {
+                container.innerHTML = Array(6).fill('<div class="skeleton h-[62px]"></div>').join('');
+                return;
+            }
+            if (compiledExecutions.length === 0) {
+                container.innerHTML = emptyState('No jobs for this day');
+                return;
+            }
+
+            container.innerHTML = compiledExecutions.map((exec, i) => {
+                const job = exec.job;
+                const isFlagged = job.flagged;
+                return `
+                    <div class="side-card ${isFlagged ? 'flagged' : ''}" style="--region:${getColorForRegion(job.region)}" onclick="openDetailsByIndex(${i})">
+                        <div class="flex justify-between items-center mb-1 gap-2">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span class="text-xs mono t-2">${esc(job.id)}</span>
+                                ${isFlagged ? '<span class="tag tag-failed !text-[10px] !py-0">Failed</span>' : ''}
+                                ${exec.warningBadge}
+                            </div>
+                            <span class="time-text ${viewMode === 'LOCAL' ? 'local' : ''}">${esc(exec.displayPrimary)}</span>
+                        </div>
+                        <div class="text-[13px] font-medium t-1 truncate">${esc(job.name)}</div>
+                        <div class="text-[11px] t-3 truncate mt-0.5">${esc(exec.displaySecondary)}</div>
+                    </div>`;
+            }).join('');
+        }
+
+        function renderMainList() {
+            const container = document.getElementById('jobListContainer');
+
+            if (isLoading) {
+                container.innerHTML = Array(6).fill('<div class="skeleton h-12 mb-2"></div>').join('');
+                return;
+            }
+            if (compiledExecutions.length === 0) {
+                container.innerHTML = `<div class="surface rounded-lg">${emptyState('No jobs match the current view')}</div>`;
+                return;
+            }
+
+            const rows = compiledExecutions.map((exec, i) => {
+                const job = exec.job;
+                const isFlagged = job.flagged;
+                const region = getColorForRegion(job.region);
+
+                return `
+                    <tr class="${isFlagged ? 'flagged' : ''}" onclick="openDetailsByIndex(${i})">
+                        <td class="whitespace-nowrap">
+                            <div class="time-text ${viewMode === 'LOCAL' ? 'local' : ''}">${esc(exec.displayPrimary)}</div>
+                            <div class="text-[11px] t-3 mt-0.5">${esc(exec.displaySecondary)}</div>
+                        </td>
+                        <td><span class="tag tag-id">${esc(job.id)}</span></td>
+                        <td class="min-w-[220px]">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-[13px] font-medium t-1">${esc(job.name)}</span>
+                                ${exec.warningBadge}
+                            </div>
+                            <div class="text-[11px] mono t-3 mt-0.5 truncate max-w-md" title="${esc(job.box)}">${esc(job.box)}</div>
+                        </td>
+                        <td class="whitespace-nowrap"><span class="inline-flex items-center gap-2 t-1"><span class="region-dot" style="background:${region}"></span>${esc(job.region)}</span></td>
+                        <td class="t-2">${esc(job.dependency)}</td>
+                        <td class="whitespace-nowrap">${isFlagged ? '<span class="tag tag-failed">Failed</span>' : '<span class="tag tag-ok">Scheduled</span>'}</td>
+                    </tr>`;
+            }).join('');
+
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead><tr>
+                        <th>${viewMode === 'IST' ? 'Time (IST)' : 'Time (Local)'}</th>
+                        <th>Job ID</th>
+                        <th>Job</th>
+                        <th>Region</th>
+                        <th>Dependency</th>
+                        <th>Status</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>`;
+        }
+
+        function renderAdvancedGantt() {
+            const labelsContainer = document.getElementById('ganttLabelsContainer');
+            const barsContainer = document.getElementById('ganttBarsContainer');
+            labelsContainer.innerHTML = '';
+            barsContainer.innerHTML = '';
+
+            if (!isLoading && compiledExecutions.length === 0) {
+                labelsContainer.innerHTML = `<div class="p-4 text-xs t-3">No batches to show.</div>`;
+                barsContainer.style.height = '0px';
+                return;
+            }
+
+            const labelsFrag = document.createDocumentFragment();
+            const barsFrag = document.createDocumentFragment();
+
+            compiledExecutions.forEach((exec, i) => {
+                const job = exec.job;
+                const isFlagged = job.flagged;
+
+                const labelRow = document.createElement('div');
+                labelRow.className = 'gantt-row';
+                labelRow.innerHTML = `<span class="gantt-label ${isFlagged ? 'flagged' : ''}" title="${esc(job.name)}">${esc(job.name)}</span>`;
+                labelRow.querySelector('.gantt-label').addEventListener('click', () => openDetailsByIndex(i));
+                labelsFrag.appendChild(labelRow);
+
+                const barRow = document.createElement('div');
+                barRow.className = 'gantt-row';
+
+                const leftPercent = (exec.sortMinutes / 1440) * 100;
+                const widthPercent = (45 / 1440) * 100;
+                const color = getColorForRegion(job.region);
+
+                let hoverTitle = `${job.name} | ${exec.displayPrimary} | ${exec.displaySecondary}`;
+                if (isFlagged) hoverTitle = `FLAGGED: ${job.flagMessage} | ` + hoverTitle;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'gantt-bar-wrapper';
+                const bar = document.createElement('div');
+                bar.className = 'gantt-bar' + (isFlagged ? ' flagged' : '');
+                bar.style.cssText = `left:${leftPercent}%; width:${widthPercent}%; min-width:60px; background:${color};`;
+                bar.title = hoverTitle;
+                bar.textContent = job.id;
+                bar.addEventListener('click', () => openDetailsByIndex(i));
+                wrapper.appendChild(bar);
+                barRow.appendChild(wrapper);
+                barsFrag.appendChild(barRow);
+            });
+
+            labelsContainer.appendChild(labelsFrag);
+            barsContainer.appendChild(barsFrag);
+            barsContainer.style.height = `${compiledExecutions.length * 40}px`;
+        }
+
+        function switchTab(tabName) {
+            const tabList = document.getElementById('tabList');
+            const tabChart = document.getElementById('tabChart');
+            const viewList = document.getElementById('viewList');
+            const viewChart = document.getElementById('viewChart');
+
+            const on = (el) => { el.className = "pb-2.5 text-[13px] font-medium border-b-2 transition-colors"; el.style.color = 'var(--accent-text)'; el.style.borderColor = 'var(--accent)'; };
+            const off = (el) => { el.className = "pb-2.5 text-[13px] font-medium t-3 border-b-2 border-transparent transition-colors hover:t-1"; el.style.color = ''; el.style.borderColor = ''; };
+
+            if (tabName === 'list') {
+                viewList.classList.remove('hidden'); viewChart.classList.add('hidden');
+                on(tabList); off(tabChart);
+            } else {
+                viewList.classList.add('hidden'); viewChart.classList.remove('hidden');
+                on(tabChart); off(tabList);
+            }
+        }
+
+        /* ---------- Modals ---------- */
+        function toggleModal(modalId) { document.getElementById(modalId).classList.toggle('modal-active'); }
+
+        function openDetailsByIndex(i) {
+            const exec = compiledExecutions[i];
+            if (exec) openDetailsByExecution(exec);
+        }
+
+        function openDetailsByExecution(exec) {
+            const job = exec.job;
+            currentDetailJobId = job.id;
+
+            document.getElementById('detId').innerText = `ID ${job.id}`;
+            document.getElementById('detName').innerText = job.name;
+            document.getElementById('detRegion').innerText = job.region;
+            document.getElementById('detBox').innerText = job.box;
+            document.getElementById('detSchedulePrimary').innerText = exec.displayPrimary;
+
+            const block = document.getElementById('modalPrimaryBlock');
+            const big = document.getElementById('detSchedulePrimary');
+
+            if (viewMode === 'IST') {
+                block.style.borderLeftColor = 'var(--accent)';
+                big.style.color = 'var(--accent-text)';
+                document.getElementById('modalPrimaryBadge').innerText = "IST";
+                document.getElementById('detScheduleSecondary').innerText = `${exec.formattedLocal} ${exec.shortRegion} [UTC${exec.utcDisplay}]`;
+                document.getElementById('modalSecondaryLabel').innerText = "Local configured schedule";
+            } else {
+                block.style.borderLeftColor = 'var(--local)';
+                big.style.color = 'var(--local)';
+                document.getElementById('modalPrimaryBadge').innerText = "Local";
+                document.getElementById('detScheduleSecondary').innerText = `${exec.formattedIST} IST`;
+                document.getElementById('modalSecondaryLabel').innerText = "Equivalent IST time";
+            }
+
+            document.getElementById('detAbap').innerText = job.abap;
+            document.getElementById('detDependency').innerText = job.dependency;
+
+            const flagBlock = document.getElementById('flaggedStateBlock');
+            const actionBlock = document.getElementById('flagActionBlock');
+            document.getElementById('flagInput').value = '';
+
+            if (job.flagged) {
+                flagBlock.classList.remove('hidden');
+                actionBlock.classList.add('hidden');
+                document.getElementById('detFlagMessage').innerText = job.flagMessage;
+            } else {
+                flagBlock.classList.add('hidden');
+                actionBlock.classList.remove('hidden');
+            }
+
+            document.getElementById('detailsModal').classList.add('modal-active');
+        }
+
+        function openAddJobModal() {
+            isEditingMode = false;
+            document.getElementById('formModalTitle').innerText = "Add new job";
+            document.getElementById('formSubmitBtn').innerText = "Save job";
+            document.getElementById('jobForm').reset();
+            document.getElementById('formJobId').disabled = false;
+            document.getElementById('jobFormModal').classList.add('modal-active');
+            setTimeout(() => document.getElementById('formJobId').focus(), 50);
+        }
+
+        function openEditJobModal() {
+            const job = jobsData.find(j => j.id === currentDetailJobId);
+            if (!job) return;
+
+            isEditingMode = true;
+            document.getElementById('detailsModal').classList.remove('modal-active');
+
+            document.getElementById('formModalTitle').innerText = "Edit job";
+            document.getElementById('formSubmitBtn').innerText = "Update job";
+
+            document.getElementById('formJobId').value = job.id;
+            document.getElementById('formJobId').disabled = true;
+            document.getElementById('formJobName').value = job.name;
+            document.getElementById('formJobBox').value = job.box;
+            document.getElementById('formJobRegion').value = job.region;
+            document.getElementById('formJobAbap').value = job.abap;
+            document.getElementById('formJobSchedule').value = job.schedule;
+            document.getElementById('formJobDependency').value = job.dependency;
+
+            if (job.rule) {
+                document.getElementById('formRuleFrequency').value = job.rule.frequency;
+                document.getElementById('formRuleTime').value = job.rule.time;
+                document.getElementById('formRuleUtcOffset').value = job.rule.utc_offset;
+            }
+
+            document.getElementById('jobFormModal').classList.add('modal-active');
+        }
+
+        async function handleSaveJob(e) {
+            e.preventDefault();
+            const freqVal = document.getElementById('formRuleFrequency').value;
+            const newRule = {
+                frequency: freqVal,
+                time: document.getElementById('formRuleTime').value,
+                utc_offset: document.getElementById('formRuleUtcOffset').value
+            };
+
+            if (freqVal === 'weekdays') newRule.days = [1, 2, 3, 4, 5];
+            if (freqVal === 'monthly_nth_weekday') {
+                newRule.day = 3;
+                newRule.n = 1;
+            }
+
+            const payloadData = {
+                id: parseInt(document.getElementById('formJobId').value, 10),
+                name: document.getElementById('formJobName').value,
+                box: document.getElementById('formJobBox').value,
+                region: document.getElementById('formJobRegion').value,
+                abap: document.getElementById('formJobAbap').value,
+                schedule: document.getElementById('formJobSchedule').value,
+                dependency: document.getElementById('formJobDependency').value,
+                sector: currentSector,
+                rule: newRule
+            };
+
+            try {
+                const res = await fetch(isEditingMode ? `/api/jobs/${payloadData.id}` : '/api/jobs', {
+                    method: isEditingMode ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payloadData)
+                });
+                if (!res.ok) throw new Error('Request failed');
+                document.getElementById('jobFormModal').classList.remove('modal-active');
+                toast(isEditingMode ? 'Job updated' : 'Job added');
+                loadSectorData();
+            } catch (err) {
+                console.error("Error saving job to database", err);
+                toast('Could not save the job', 'error');
+            }
+        }
+
+        async function deleteCurrentJob() {
+            if (!confirm("Are you sure you want to PERMANENTLY delete this job from the database?")) return;
+            try {
+                const res = await fetch(`/api/jobs/${currentDetailJobId}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Request failed');
+                document.getElementById('detailsModal').classList.remove('modal-active');
+                toast('Job deleted');
+                loadSectorData();
+            } catch (err) {
+                console.error("Error deleting job", err);
+                toast('Could not delete the job', 'error');
+            }
+        }
+
+        async function flagCurrentJob() {
+            const msg = document.getElementById('flagInput').value.trim();
+            if (!msg) { toast('Describe the issue before flagging', 'error'); document.getElementById('flagInput').focus(); return; }
+
+            try {
+                const res = await fetch(`/api/jobs/${currentDetailJobId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ flagged: true, flagMessage: msg })
+                });
+                if (!res.ok) throw new Error('Request failed');
+                document.getElementById('detailsModal').classList.remove('modal-active');
+                toast('Job flagged');
+                loadSectorData();
+            } catch (err) {
+                console.error("Error flagging job", err);
+                toast('Could not flag the job', 'error');
+            }
+        }
+
+        async function resolveCurrentJob() {
+            try {
+                const res = await fetch(`/api/jobs/${currentDetailJobId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ flagged: false, flagMessage: "" })
+                });
+                if (!res.ok) throw new Error('Request failed');
+                document.getElementById('detailsModal').classList.remove('modal-active');
+                toast('Issue marked as resolved');
+                loadSectorData();
+            } catch (err) {
+                console.error("Error resolving job flag", err);
+                toast('Could not resolve the flag', 'error');
+            }
+        }
+
+        /* ---------- Keyboard shortcuts ---------- */
+        document.addEventListener('keydown', (e) => {
+            const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+            if (e.key === 'Escape') {
+                ['jobFormModal', 'detailsModal'].forEach(id => document.getElementById(id).classList.remove('modal-active'));
+                if (document.activeElement) document.activeElement.blur();
+            } else if (e.key === '/' && !typing) {
+                e.preventDefault(); document.getElementById('searchInput').focus();
+            }
+        });
+
+        /* ---------- Init ---------- */
+        initScrollSync();
+        generateGanttGrid();
+        initDatePicker();
+        loadSectorData();
+    </script>
+</body>
+</html>

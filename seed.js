@@ -1,0 +1,997 @@
+const mongoose = require('mongoose');
+
+const BoxSchema = new mongoose.Schema({ name: String, sector: String });
+const Box = mongoose.model('Box', BoxSchema);
+const JobSchema = new mongoose.Schema({
+    jobId: Number, name: String, box: { type: mongoose.Schema.Types.ObjectId, ref: 'Box' },
+    region: String, abap: String, schedule: String, dependency: String,
+    flagged: Boolean, flagMessage: String, rule: Object
+});
+const Job = mongoose.model('Job', JobSchema);
+
+const rawData = [
+  {
+    "id": 118098,
+    "name": "ZBWEU_FCA_DE",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B WEU",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "First Job (Starts at 06:00 AM CET as per schedule)"
+  },
+  {
+    "id": 115194,
+    "name": "ZBWEU_FCA_BNL",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B WEU",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBWEU_FCA_DE"
+  },
+  {
+    "id": 118099,
+    "name": "ZBWEU_FCA_GR",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B WEU",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBWEU_FCA_BNL"
+  },
+  {
+    "id": 118100,
+    "name": "ZBWEU_FCA_FR",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B WEU",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBWEU_FCA_GR"
+  },
+  {
+    "id": 118101,
+    "name": "ZBWEU_FCA_NO",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B WEU",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBWEU_FCA_FR"
+  },
+  {
+    "id": 118299,
+    "name": "ZBWEU_FCA_IT",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B WEU",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBWEU_FCA_NO"
+  },
+  {
+    "id": 118300,
+    "name": "ZBWEU_FCA_IB",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B WEU",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBWEU_FCA_IT"
+  },
+  {
+    "id": 118301,
+    "name": "ZBWEU_FCA_GB",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B WEU",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBWEU_FCA_IB"
+  },
+  {
+    "id": 115195,
+    "name": "ZBCEE_FCA_CH",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBWEU_FCA_GB"
+  },
+  {
+    "id": 118463,
+    "name": "ZBCEE_FCA_AT",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_CH"
+  },
+  {
+    "id": 118464,
+    "name": "ZBCEE_FCA_CZ",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_AT"
+  },
+  {
+    "id": 118465,
+    "name": "ZBCEE_FCA_SI",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_CZ"
+  },
+  {
+    "id": 118466,
+    "name": "ZBCEE_FCA_SK",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_SI"
+  },
+  {
+    "id": 118557,
+    "name": "ZBCEE_FCA_BG",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_SK"
+  },
+  {
+    "id": 118558,
+    "name": "ZBCEE_FCA_HU",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_BG"
+  },
+  {
+    "id": 151402,
+    "name": "ZBCEE_FCA_HR",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_HU"
+  },
+  {
+    "id": 118559,
+    "name": "ZBCEE_FCA_PL",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_HR"
+  },
+  {
+    "id": 118560,
+    "name": "ZBCEE_FCA_RO",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_PL"
+  },
+  {
+    "id": 139961,
+    "name": "ZBCEE_FCA_RS",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_RO"
+  },
+  {
+    "id": 148369,
+    "name": "ZBCEE_FCA_UA",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_RS"
+  },
+  {
+    "id": 90001,
+    "name": "ZBCEE_FCA_BA",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_UA"
+  },
+  {
+    "id": 90002,
+    "name": "ZBCEE_FCA_LV",
+    "box": "20522 P31-APO-DP-B-EU-FCA-BOX",
+    "region": "B CEE",
+    "abap": "N/A",
+    "schedule": "Sundays Quarterly at 06:00 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "06:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCEE_FCA_BA"
+  },
+  {
+    "id": 147396,
+    "name": "ZBCIS_FCA_KZR",
+    "box": "26584 P31-APO-DP-B-CIS-FCA-BOX",
+    "region": "B CIS",
+    "abap": "N/A",
+    "schedule": "After BOX 20522 (WEU/CEE FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:00", "utc_offset": "+01:00" },
+    "dependency": "After FCA jobs for EU & CEE"
+  },
+  {
+    "id": 90020,
+    "name": "ZBCIS_FCA_KZP",
+    "box": "26584 P31-APO-DP-B-CIS-FCA-BOX",
+    "region": "B CIS",
+    "abap": "N/A",
+    "schedule": "After BOX 20522 (WEU/CEE FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBCIS_FCA_KZR"
+  },
+  {
+    "id": 118450,
+    "name": "ZBSKP_FCA_BNL",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After FCA jobs for CIS"
+  },
+  {
+    "id": 118451,
+    "name": "ZBSKP_FCA_PL",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_BNL"
+  },
+  {
+    "id": 118452,
+    "name": "ZBSKP_FCA_DACH",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_PL"
+  },
+  {
+    "id": 118453,
+    "name": "ZBSKP_FCA_FR",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_DACH"
+  },
+  {
+    "id": 118454,
+    "name": "ZBSKP_FCA_GR",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_FR"
+  },
+  {
+    "id": 118455,
+    "name": "ZBSKP_FCA_GB",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_GR"
+  },
+  {
+    "id": 90030,
+    "name": "ZBSKP_FCA_IE",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_GB"
+  },
+  {
+    "id": 118456,
+    "name": "ZBSKP_FCA_IB",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_IE"
+  },
+  {
+    "id": 118457,
+    "name": "ZBSKP_FCA_IT",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_IB"
+  },
+  {
+    "id": 118460,
+    "name": "ZBSKP_FCA_NO",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_IT"
+  },
+  {
+    "id": 90031,
+    "name": "ZBSKP_FCA_LV",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_NO"
+  },
+  {
+    "id": 90032,
+    "name": "ZBSKP_FCA_UA",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_LV"
+  },
+  {
+    "id": 90033,
+    "name": "ZBSKP_FCA_SK",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_UA"
+  },
+  {
+    "id": 90034,
+    "name": "ZBSKP_FCA_HR",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_SK"
+  },
+  {
+    "id": 90035,
+    "name": "ZBSKP_FCA_HU",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_HR"
+  },
+  {
+    "id": 90036,
+    "name": "ZBSKP_FCA_CZ",
+    "box": "20804 P31-APO-DP-B-SKP-FCA-BOX",
+    "region": "UK SKP",
+    "abap": "N/A",
+    "schedule": "After Box 26584 (CIS FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "10:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBSKP_FCA_HU"
+  },
+  {
+    "id": 151289,
+    "name": "ZBMEA_FCA_AER",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After FCA jobs for SKP"
+  },
+  {
+    "id": 151290,
+    "name": "ZBMEA_FCA_AEP",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_AER"
+  },
+  {
+    "id": 151292,
+    "name": "ZBMEA_FCA_EG",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_AEP"
+  },
+  {
+    "id": 151293,
+    "name": "ZBMEA_FCA_SA",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_EG"
+  },
+  {
+    "id": 151294,
+    "name": "ZBMEA_FCA_TN",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_SA"
+  },
+  {
+    "id": 148372,
+    "name": "ZBMEA_FCA_TRR",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_TN"
+  },
+  {
+    "id": 148373,
+    "name": "ZBMEA_FCA_TRP",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_TRR"
+  },
+  {
+    "id": 151295,
+    "name": "ZBMEA_FCA_ZAP",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_TRP"
+  },
+  {
+    "id": 151296,
+    "name": "ZBMEA_FCA_ZAR",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_ZAP"
+  },
+  {
+    "id": 151298,
+    "name": "ZBMEA_FCA_ILR",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_ZAR"
+  },
+  {
+    "id": 151300,
+    "name": "ZBMEA_FCA_ILP",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_ILR"
+  },
+  {
+    "id": 90040,
+    "name": "ZBMEA_FCA_NG",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_ILP"
+  },
+  {
+    "id": 90041,
+    "name": "ZBMEA_FCA_DZ",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_NG"
+  },
+  {
+    "id": 90042,
+    "name": "ZBMEA_FCA_MA",
+    "box": "21906 P31-APO-DP-B-MEA-FCA-BOX",
+    "region": "B MEA",
+    "abap": "N/A",
+    "schedule": "After Box 20804 (SKP FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBMEA_FCA_DZ"
+  },
+  {
+    "id": 121955,
+    "name": "ZKANZ_FCA_AUR",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After FCA jobs for MEA"
+  },
+  {
+    "id": 121956,
+    "name": "ZKANZ_FCA_AUP",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKANZ_FCA_AUR"
+  },
+  {
+    "id": 121957,
+    "name": "ZKANZ_FCA_NZR",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKANZ_FCA_AUP"
+  },
+  {
+    "id": 121958,
+    "name": "ZKANZ_FCA_NZP",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKANZ_FCA_NZR"
+  },
+  {
+    "id": 121959,
+    "name": "ZKJPK_FCA_JPP",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKANZ_FCA_NZP"
+  },
+  {
+    "id": 121960,
+    "name": "ZKJPK_FCA_JPR",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKJPK_FCA_JPP"
+  },
+  {
+    "id": 121961,
+    "name": "ZKGCN_FCA_CNP",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKJPK_FCA_JPR"
+  },
+  {
+    "id": 121962,
+    "name": "ZKGCN_FCA_CNR",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKGCN_FCA_CNP"
+  },
+  {
+    "id": 121966,
+    "name": "ZKGCN_FCA_HKP",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKGCN_FCA_CNR"
+  },
+  {
+    "id": 121967,
+    "name": "ZKSEI_FCA_THR",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKGCN_FCA_HKP"
+  },
+  {
+    "id": 121969,
+    "name": "ZKSEI_FCA_THP",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKSEI_FCA_THR"
+  },
+  {
+    "id": 121970,
+    "name": "ZKSEI_FCA_MYP",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKSEI_FCA_THP"
+  },
+  {
+    "id": 121971,
+    "name": "ZKSEI_FCA_SGP",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKSEI_FCA_MYP"
+  },
+  {
+    "id": 121972,
+    "name": "ZKSEI_FCA_INP",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKSEI_FCA_SGP"
+  },
+  {
+    "id": 152514,
+    "name": "ZKSEI_FCA_INR",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKSEI_FCA_INP"
+  },
+  {
+    "id": 90050,
+    "name": "ZKJPK_FCA_JPS",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKSEI_FCA_INR"
+  },
+  {
+    "id": 90051,
+    "name": "ZKJPK_FCA_KRR",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKJPK_FCA_JPS"
+  },
+  {
+    "id": 90052,
+    "name": "ZKJPK_FCA_KRP",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKJPK_FCA_KRR"
+  },
+  {
+    "id": 90053,
+    "name": "ZKGCN_FCA_HKR",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKJPK_FCA_KRP"
+  },
+  {
+    "id": 90054,
+    "name": "ZKGCN_FCA_TWR",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKGCN_FCA_HKR"
+  },
+  {
+    "id": 90055,
+    "name": "ZKGCN_FCA_TWP",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKGCN_FCA_TWR"
+  },
+  {
+    "id": 90056,
+    "name": "ZKSEI_FCA_THH",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKGCN_FCA_TWP"
+  },
+  {
+    "id": 90057,
+    "name": "ZKSEI_FCA_SGR",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKSEI_FCA_THH"
+  },
+  {
+    "id": 90058,
+    "name": "ZKSEI_FCA_MYR",
+    "box": "20841 P31-APO-DP-B-FCA-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "After Box 21906 (MEA FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "11:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZKSEI_FCA_SGR"
+  },
+  {
+    "id": 145003,
+    "name": "ZBLAM_FCA_AR",
+    "box": "23006 P31-APO-DP-B-FCA-LAT-BOX",
+    "region": "B LAT",
+    "abap": "N/A",
+    "schedule": "After Box 20841 (APAC FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "12:00", "utc_offset": "+01:00" },
+    "dependency": "After FCA jobs for APAC"
+  },
+  {
+    "id": 145004,
+    "name": "ZBLAM_FCA_BR",
+    "box": "23006 P31-APO-DP-B-FCA-LAT-BOX",
+    "region": "B LAT",
+    "abap": "N/A",
+    "schedule": "After Box 20841 (APAC FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "12:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBLAM_FCA_AR"
+  },
+  {
+    "id": 142134,
+    "name": "ZBLAM_FCA_COR",
+    "box": "23006 P31-APO-DP-B-FCA-LAT-BOX",
+    "region": "B LAT",
+    "abap": "N/A",
+    "schedule": "After Box 20841 (APAC FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "12:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBLAM_FCA_BR"
+  },
+  {
+    "id": 142137,
+    "name": "ZBLAM_FCA_COP",
+    "box": "23006 P31-APO-DP-B-FCA-LAT-BOX",
+    "region": "B LAT",
+    "abap": "N/A",
+    "schedule": "After Box 20841 (APAC FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "12:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBLAM_FCA_COR"
+  },
+  {
+    "id": 142136,
+    "name": "ZBLAM_FCA_MXR",
+    "box": "23006 P31-APO-DP-B-FCA-LAT-BOX",
+    "region": "B LAT",
+    "abap": "N/A",
+    "schedule": "After Box 20841 (APAC FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "12:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBLAM_FCA_COP"
+  },
+  {
+    "id": 142138,
+    "name": "ZBLAM_FCA_MXP",
+    "box": "23006 P31-APO-DP-B-FCA-LAT-BOX",
+    "region": "B LAT",
+    "abap": "N/A",
+    "schedule": "After Box 20841 (APAC FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "12:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBLAM_FCA_MXR"
+  },
+  {
+    "id": 142135,
+    "name": "ZBLAM_FCA_PER",
+    "box": "23006 P31-APO-DP-B-FCA-LAT-BOX",
+    "region": "B LAT",
+    "abap": "N/A",
+    "schedule": "After Box 20841 (APAC FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "12:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBLAM_FCA_MXP"
+  },
+  {
+    "id": 146166,
+    "name": "ZBLAM_FCA_PEP",
+    "box": "23006 P31-APO-DP-B-FCA-LAT-BOX",
+    "region": "B LAT",
+    "abap": "N/A",
+    "schedule": "After Box 20841 (APAC FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "12:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBLAM_FCA_PER"
+  },
+  {
+    "id": 90060,
+    "name": "ZBLAM_FCA_GT",
+    "box": "23006 P31-APO-DP-B-FCA-LAT-BOX",
+    "region": "B LAT",
+    "abap": "N/A",
+    "schedule": "After Box 20841 (APAC FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "12:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBLAM_FCA_PEP"
+  },
+  {
+    "id": 90061,
+    "name": "ZBLAM_FCA_EC",
+    "box": "23006 P31-APO-DP-B-FCA-LAT-BOX",
+    "region": "B LAT",
+    "abap": "N/A",
+    "schedule": "After Box 20841 (APAC FCA) done",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "12:00", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBLAM_FCA_GT"
+  },
+  {
+    "id": 127599,
+    "name": "ZBNAB_FCA_USP",
+    "box": "21770 P31-APO-DP-B-FCA-NA-BOX",
+    "region": "B NA",
+    "abap": "N/A",
+    "schedule": "After Box 23006 - P31-APO-DP-B-FCA-LAT-BOX",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "12:30", "utc_offset": "+01:00" },
+    "dependency": "After FCA jobs for LAT"
+  },
+  {
+    "id": 127604,
+    "name": "ZBNAB_FCA_CAP",
+    "box": "21770 P31-APO-DP-B-FCA-NA-BOX",
+    "region": "B NA",
+    "abap": "N/A",
+    "schedule": "After Box 23006 - P31-APO-DP-B-FCA-LAT-BOX",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "12:30", "utc_offset": "+01:00" },
+    "dependency": "After Job ZBNAB_FCA_USP"
+  },
+  {
+    "id": 90070,
+    "name": "ZBNAB_FCA_USR",
+    "box": "P31-APO-DP-B-FCA-NA-RET-BOX",
+    "region": "B NA",
+    "abap": "N/A",
+    "schedule": "Sundays only the ones indicated in calendar at 05:30 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "05:30", "utc_offset": "+01:00" },
+    "dependency": "1st job"
+  },
+  {
+    "id": 90071,
+    "name": "ZBNAB_FCA_CAR",
+    "box": "P31-APO-DP-B-FCA-NA-RET-BOX",
+    "region": "B NA",
+    "abap": "N/A",
+    "schedule": "Sundays only the ones indicated in calendar at 05:30 am CET",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "05:30", "utc_offset": "+01:00" },
+    "dependency": "After ZBNAB_FCA_USR"
+  },
+  {
+    "id": 139697,
+    "name": "MC_YBDP_EU_FORECAST",
+    "box": "16140 P31-APO-DP-UK-FCST-BOX",
+    "region": "B WEU/CEE/SKP",
+    "abap": "N/A",
+    "schedule": "19:00 pm CET Sunday",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "19:00", "utc_offset": "+01:00" },
+    "dependency": "1st Job"
+  },
+  {
+    "id": 184780,
+    "name": "MC_YBDP_AP_FORECAST",
+    "box": "18478 P31-APO-DP-UK-FCST-APAC-BOX",
+    "region": "B APAC",
+    "abap": "N/A",
+    "schedule": "18:00 pm CET Sunday",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "18:00", "utc_offset": "+01:00" },
+    "dependency": "1st Job"
+  },
+  {
+    "id": 139809,
+    "name": "YBDP_NAB_FORECAST",
+    "box": "20777 P31-APO-DP-UK-FCST-NA-BOX",
+    "region": "B NA",
+    "abap": "N/A",
+    "schedule": "23:00 PM EST5EDT (Connecticut) Sunday",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "23:00", "utc_offset": "-05:00" },
+    "dependency": "1st Job"
+  },
+  {
+    "id": 142979,
+    "name": "YBDP_LAM_FORECAST",
+    "box": "23030 P31-APO-DP-B-FCST-LAT-BOX",
+    "region": "B LAT",
+    "abap": "N/A",
+    "schedule": "23:00 PM COT (Colombia) Sunday",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "23:00", "utc_offset": "-05:00" },
+    "dependency": "1st Job"
+  },
+  {
+    "id": 90011,
+    "name": "YBDP_NAB_FORECAST_RETAIL",
+    "box": "P31-APO-DP-UK-FCST-NA-RET-BOX",
+    "region": "B NA",
+    "abap": "N/A",
+    "schedule": "23:00 PM EST Sunday",
+    "rule": { "frequency": "custom_days", "days": [0], "time": "23:00", "utc_offset": "-05:00" },
+    "dependency": "1st Job"
+  }
+];
+
+async function seedDatabase() {
+    await mongoose.connect('mongodb://127.0.0.1:27017/batch_scheduler');
+    await Box.deleteMany({});
+    await Job.deleteMany({});
+    for (const job of rawData) {
+        let boxDoc = await Box.findOne({ name: job.box, sector: 'beauty' });
+        if (!boxDoc) boxDoc = await Box.create({ name: job.box, sector: 'beauty' });
+        await Job.create({ jobId: job.id, name: job.name, box: boxDoc._id, region: job.region, abap: job.abap, schedule: job.schedule, dependency: job.dependency, flagged: false, flagMessage: "", rule: job.rule });
+    }
+    console.log("Database Seeded!");
+    process.exit();
+}
+seedDatabase();
